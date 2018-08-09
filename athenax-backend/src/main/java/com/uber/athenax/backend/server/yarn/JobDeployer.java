@@ -25,7 +25,6 @@ import org.apache.flink.configuration.Configuration;
 import org.apache.flink.runtime.clusterframework.messages.ShutdownClusterAfterJob;
 import org.apache.flink.runtime.jobgraph.JobGraph;
 import org.apache.flink.util.Preconditions;
-import org.apache.flink.yarn.YarnClusterClient;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.client.api.YarnClient;
 import org.apache.hadoop.yarn.client.api.YarnClientApplication;
@@ -42,7 +41,7 @@ import java.util.concurrent.TimeUnit;
  * {@link JobDeployer} takes a {@link JobGraph} and executes it on YARN.
  *
  * <p>The current deployment model closely follow the
- * <a href="https://ci.apache.org/projects/flink/flink-docs-release-1.3/setup/yarn_setup.html">Flink On YARN</a>
+ * <a href="https://ci.apache.org/projects/flink/flink-docs-release-1.5/ops/deployment/yarn_setup.html">Flink On YARN</a>
  * set ups. Each job has its own dedicated Flink cluster that is spawned on YARN.
  * The deployment model needs to be revisited once FLIP-6 has been landed.</p>
  *
@@ -68,15 +67,14 @@ class JobDeployer {
   }
 
   void start(JobGraph job, JobConf desc) throws Exception {
-    AthenaXYarnClusterDescriptor descriptor = new AthenaXYarnClusterDescriptor(clusterConf, yarnClient, desc);
+    AthenaXYarnClusterDescriptor descriptor =
+        new AthenaXYarnClusterDescriptor(clusterConf, yarnClient, flinkConf, desc);
     start(descriptor, job);
   }
 
   @VisibleForTesting
   void start(AthenaXYarnClusterDescriptor descriptor, JobGraph job) throws Exception {
-    Configuration conf = new Configuration(flinkConf);
-    descriptor.setFlinkConfiguration(conf);
-    YarnClusterClient client = descriptor.deploy();
+    ClusterClient<ApplicationId> client = descriptor.deploy();
     try {
       client.runDetached(job, null);
       stopAfterJob(client, job.getJobID());
